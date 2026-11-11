@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <circle cx="100" cy="100" r="90" fill="#0B0F19" stroke="#EF4444" stroke-width="6"/>
+  <!-- TT Racket -->
+  <circle cx="95" cy="85" r="45" fill="#EF4444"/>
+  <path d="M95 130 L115 175 C116 178 114 182 110 182 L90 182 C86 182 84 178 85 175 L100 130 Z" fill="#8B5CF6"/>
+  <!-- Table Tennis Ball -->
+  <circle cx="138" cy="70" r="14" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="2"/>
+  <!-- Text -->
+  <text x="100" y="115" font-family="sans-serif" font-size="14" font-weight="bold" fill="#FFFFFF" text-anchor="middle">NEXTGEN</text>
+  <text x="100" y="130" font-family="sans-serif" font-size="10" font-weight="semibold" fill="#FCA5A5" text-anchor="middle">TT ACADEMY</text>
+</svg>
