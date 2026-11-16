@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useTransition, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   UserCheck,
@@ -18,104 +18,170 @@ import {
   Sparkles,
   ShieldCheck,
   AlertCircle,
-  HelpCircle,
-  ChevronRight,
+  Loader2,
+  Info,
 } from 'lucide-react';
+import {
+  getAvailableSlots,
+  submitBookingRequest,
+  type TimeSlotAvailability,
+  type DayAvailabilityResult,
+} from '@/actions/booking-actions';
+import { ACADEMY_CONFIG, BOOKING_TYPES, type BookingType } from '@/lib/constants';
 
-interface BookingState {
-  type: 'personal' | 'group' | 'table';
-  date: string;
-  timeSlot: string;
-  durationHours: number;
-  fullName: string;
-  email: string;
-  phone: string;
+interface BookingFormState {
+  bookingType: BookingType;
+  bookingDate: string;
+  startTime: string; // 'HH:mm'
+  durationMinutes: number;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
   skillLevel: 'beginner' | 'intermediate' | 'advanced';
+  participantsCount: number;
+  guardianName: string;
+  guardianPhone: string;
   notes: string;
 }
 
-const PROGRAM_DETAILS = {
-  personal: {
+const PROGRAM_CARDS = [
+  {
+    type: BOOKING_TYPES.PERSONAL_COACHING,
     title: 'Personal Coaching (1-on-1)',
-    ratePerHour: 2500,
+    badge: '1-on-1 Flagship',
+    hourlyRate: 2500,
     coach: 'Chanul Dulsen (National No. 1)',
-    badge: '1-on-1 Private',
     icon: UserCheck,
-    description: 'Direct high-intensity coaching with stroke corrections and multiball drills.',
+    description: 'Direct high-intensity 1-on-1 technical coaching, stroke biomechanics, and multiball drills.',
   },
-  group: {
+  {
+    type: BOOKING_TYPES.GROUP_COACHING,
     title: 'Group Coaching Session',
-    ratePerHour: 2500,
-    coach: 'Squad Mentorship',
     badge: 'Squad Drills',
+    hourlyRate: 2500,
+    coach: 'Squad Mentorship',
     icon: Users,
-    description: 'Dynamic group training focusing on tactical consistency and peer matches.',
+    description: 'Dynamic group training focusing on tactical consistency, multiball patterns, and peer matches.',
   },
-  table: {
-    title: 'Table-Only Reservation',
-    ratePerHour: 500,
-    coach: 'Self Practice',
+  {
+    type: BOOKING_TYPES.TABLE_ONLY,
+    title: 'Table-Only Rental',
     badge: 'Open Play',
+    hourlyRate: 500,
+    coach: 'Self Practice',
     icon: CircleDot,
-    description: 'Court rental for personal sparring or games with a friend. 3-star balls provided.',
+    description: 'Court rental for personal sparring or games with friends. 3-star balls and nets provided.',
   },
-};
-
-const TIME_SLOTS = [
-  '06:00 AM', '07:00 AM', '08:00 AM', '09:00 AM', '10:00 AM',
-  '11:00 AM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM',
-  '05:00 PM', '06:00 PM', '07:00 PM', '08:00 PM', '09:00 PM',
 ];
 
 function BookingFlow() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const initialType = (searchParams.get('type') as 'personal' | 'group' | 'table') || 'personal';
+  const initialTypeParam = searchParams.get('type');
+  
+  // Resolve initial program type safely
+  const initialType: BookingType =
+    initialTypeParam === 'table'
+      ? BOOKING_TYPES.TABLE_ONLY
+      : initialTypeParam === 'group'
+      ? BOOKING_TYPES.GROUP_COACHING
+      : BOOKING_TYPES.PERSONAL_COACHING;
 
   const [step, setStep] = useState<number>(1);
   const [todayStr, setTodayStr] = useState<string>('');
-  const [booking, setBooking] = useState<BookingState>({
-    type: initialType in PROGRAM_DETAILS ? initialType : 'personal',
-    date: '',
-    timeSlot: '04:00 PM',
-    durationHours: 1,
-    fullName: '',
-    email: '',
-    phone: '',
+
+  const [form, setForm] = useState<BookingFormState>({
+    bookingType: initialType,
+    bookingDate: '',
+    startTime: '16:00',
+    durationMinutes: 60,
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
     skillLevel: 'intermediate',
+    participantsCount: 2,
+    guardianName: '',
+    guardianPhone: '',
     notes: '',
   });
 
+  // Slot availability state from live Supabase
+  const [isPendingSlots, startSlotTransition] = useTransition();
+  const [dayAvailability, setDayAvailability] = useState<DayAvailabilityResult | null>(null);
+  const [slotError, setSlotError] = useState<string>('');
+
+  // Form submission state
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [submitError, setSubmitError] = useState<string>('');
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+
+  // Initialize minimum date (Tomorrow or Today in Asia/Colombo)
   useEffect(() => {
     const tomorrow = new Date(Date.now() + 86400000);
     const yyyy = tomorrow.getFullYear();
     const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
     const dd = String(tomorrow.getDate()).padStart(2, '0');
-    setBooking((prev) => ({ ...prev, date: `${yyyy}-${mm}-${dd}` }));
+    const defaultDate = `${yyyy}-${mm}-${dd}`;
+    setForm((prev) => ({ ...prev, bookingDate: defaultDate }));
 
     const today = new Date();
     const tY = today.getFullYear();
     const tM = String(today.getMonth() + 1).padStart(2, '0');
     const tD = String(today.getDate()).padStart(2, '0');
     setTodayStr(`${tY}-${tM}-${tD}`);
+
+    // Fetch initial slots for default date
+    fetchSlotsForDate(defaultDate, 60);
   }, []);
 
-  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
-  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
-  const [bookingRef, setBookingRef] = useState<string>('');
+  const fetchSlotsForDate = (date: string, duration: number) => {
+    if (!date) return;
+    setSlotError('');
+    startSlotTransition(async () => {
+      try {
+        const result = await getAvailableSlots(date, duration);
+        setDayAvailability(result);
+        if (result.isClosed) {
+          setSlotError(result.message || 'Academy is closed on this date.');
+        } else {
+          // If current selected startTime is not available, default to first available slot
+          const firstAvailable = result.slots.find((s) => s.isAvailable);
+          if (firstAvailable) {
+            setForm((prev) => ({ ...prev, startTime: firstAvailable.time }));
+          }
+        }
+      } catch (err: any) {
+        setSlotError('Failed to retrieve court schedule. Please try again.');
+      }
+    });
+  };
 
-  const currentProgram = PROGRAM_DETAILS[booking.type];
-  const totalPrice = currentProgram.ratePerHour * booking.durationHours;
+  const currentProgram =
+    PROGRAM_CARDS.find((p) => p.type === form.bookingType) || PROGRAM_CARDS[0];
+  const totalPrice = Math.round((currentProgram.hourlyRate / 60) * form.durationMinutes);
 
   const validateStep3 = () => {
     const errors: { [key: string]: string } = {};
-    if (!booking.fullName.trim()) errors.fullName = 'Full Name is required';
-    if (!booking.email.trim() || !booking.email.includes('@')) errors.email = 'Valid Email is required';
-    if (!booking.phone.trim() || booking.phone.length < 8) errors.phone = 'Valid Phone / WhatsApp number is required';
+    if (!form.customerName.trim() || form.customerName.trim().length < 2) {
+      errors.customerName = 'Please enter your full name (at least 2 characters)';
+    }
+    if (!form.customerPhone.trim() || form.customerPhone.trim().length < 8) {
+      errors.customerPhone = 'Please enter a valid phone or WhatsApp number';
+    }
+    if (form.customerEmail && !form.customerEmail.includes('@')) {
+      errors.customerEmail = 'Please provide a valid email format';
+    }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleNextStep = () => {
+    if (step === 2) {
+      if (dayAvailability?.isClosed) {
+        setSlotError('Please choose an operating date before continuing.');
+        return;
+      }
+    }
     if (step === 3) {
       if (!validateStep3()) return;
     }
@@ -128,101 +194,57 @@ function BookingFlow() {
     window.scrollTo({ top: 100, behavior: 'smooth' });
   };
 
-  const handleConfirmBooking = () => {
-    const randomRef = 'NGTT-' + Math.floor(100000 + Math.random() * 900000);
-    setBookingRef(randomRef);
-    setIsSubmitted(true);
-    window.scrollTo({ top: 100, behavior: 'smooth' });
+  // Submit request to live Supabase Backend
+  const handleSubmitBooking = async () => {
+    setSubmitError('');
+    setIsSubmitting(true);
+
+    try {
+      const result = await submitBookingRequest({
+        bookingType: form.bookingType,
+        bookingDate: form.bookingDate,
+        startTime: form.startTime,
+        durationMinutes: form.durationMinutes,
+        customerName: form.customerName,
+        customerEmail: form.customerEmail,
+        customerPhone: form.customerPhone,
+        skillLevel: form.skillLevel,
+        participantsCount: form.participantsCount,
+        guardianName: form.guardianName || undefined,
+        guardianPhone: form.guardianPhone || undefined,
+        notes: form.notes || undefined,
+      });
+
+      if (result.error) {
+        setSubmitError(result.error);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Success -> Redirect to confirmation page with booking reference
+      router.push(
+        `/booking/confirmation?ref=${encodeURIComponent(result.bookingReference!)}&type=${encodeURIComponent(result.programTitle!)}&date=${encodeURIComponent(result.bookingDate!)}&time=${encodeURIComponent(result.startTime!)}`
+      );
+    } catch (err: any) {
+      setSubmitError('An unexpected network error occurred while submitting your request.');
+      setIsSubmitting(false);
+    }
   };
 
-  // SUCCESS SCREEN
-  if (isSubmitted) {
-    return (
-      <div className="mx-auto max-w-2xl px-4 py-16 sm:py-24 text-center">
-        <div className="rounded-3xl bg-white p-8 sm:p-12 shadow-xl border border-slate-200">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 animate-fade-in">
-            <CheckCircle2 className="h-10 w-10" />
-          </div>
-
-          <span className="inline-block rounded-full bg-emerald-50 text-emerald-700 px-3 py-1 text-xs font-bold uppercase tracking-wider mb-2">
-            Reservation Registered
-          </span>
-          <h2 className="text-3xl font-extrabold text-[#101B35]">Booking Confirmed!</h2>
-          <p className="mt-2 text-sm text-slate-500">
-            Reference Code: <strong className="text-[#2675F5] font-mono text-base">{bookingRef}</strong>
-          </p>
-
-          {/* Booking Summary Box */}
-          <div className="mt-8 rounded-2xl bg-[#F5F7FB] p-6 text-left border border-slate-200 space-y-3">
-            <div className="flex justify-between items-center text-sm border-b border-slate-200/80 pb-3">
-              <span className="text-slate-500">Session Type</span>
-              <span className="font-bold text-[#101B35]">{currentProgram.title}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm border-b border-slate-200/80 pb-3">
-              <span className="text-slate-500">Scheduled Date</span>
-              <span className="font-bold text-[#101B35]">{booking.date}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm border-b border-slate-200/80 pb-3">
-              <span className="text-slate-500">Time & Duration</span>
-              <span className="font-bold text-[#101B35]">
-                {booking.timeSlot} ({booking.durationHours} hr{booking.durationHours > 1 ? 's' : ''})
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-sm border-b border-slate-200/80 pb-3">
-              <span className="text-slate-500">Player</span>
-              <span className="font-bold text-[#101B35]">{booking.fullName}</span>
-            </div>
-            <div className="flex justify-between items-center text-sm pt-1">
-              <span className="text-slate-500">Amount Due at Academy</span>
-              <span className="text-lg font-extrabold text-[#2675F5]">LKR {totalPrice.toLocaleString()}</span>
-            </div>
-          </div>
-
-          {/* Pay at academy reminder */}
-          <div className="mt-6 flex items-start gap-3 rounded-xl bg-blue-50 p-4 text-left text-xs text-blue-900 border border-blue-200">
-            <ShieldCheck className="h-5 w-5 text-[#2675F5] shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold">Pay at Academy Policy</p>
-              <p className="mt-0.5 text-blue-800">
-                Please arrive 10 minutes prior to your slot. Payment is accepted in cash or local bank transfer upon arrival. Complimentary pool table access is ready for you!
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/"
-              className="rounded-xl bg-[#101B35] px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition"
-            >
-              Return to Homepage
-            </Link>
-            <button
-              onClick={() => {
-                setIsSubmitted(false);
-                setStep(1);
-              }}
-              className="rounded-xl border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
-            >
-              Book Another Session
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const selectedSlot = dayAvailability?.slots.find((s) => s.time === form.startTime);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:py-20">
       {/* Header */}
       <div className="text-center space-y-2 mb-10">
         <span className="inline-block rounded-full bg-blue-100 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-[#2675F5]">
-          Online Reservations
+          Live Reservations
         </span>
         <h1 className="text-3xl font-extrabold text-[#101B35] sm:text-4xl">
-          Book Your Table Tennis Session
+          Reserve Your Table Tennis Session
         </h1>
-        <p className="text-sm sm:text-base text-slate-600">
-          Easy 4-step reservation. Pay in person when you arrive at NextGen TT Academy.
+        <p className="text-sm sm:text-base text-slate-600 max-w-xl mx-auto">
+          Real-time availability on our single ITTF competition table. Requests enter Pending status for Coach Chanul’s approval. Pay in-person at the academy.
         </p>
       </div>
 
@@ -236,10 +258,10 @@ function BookingFlow() {
           />
 
           {[
-            { num: 1, label: 'Session Type' },
+            { num: 1, label: 'Program' },
             { num: 2, label: 'Date & Time' },
-            { num: 3, label: 'Your Details' },
-            { num: 4, label: 'Review & Confirm' },
+            { num: 3, label: 'Player Details' },
+            { num: 4, label: 'Review & Submit' },
           ].map((item) => (
             <div key={item.num} className="relative z-10 flex flex-col items-center">
               <div
@@ -251,11 +273,13 @@ function BookingFlow() {
                     : 'bg-white text-slate-400 border border-slate-300'
                 }`}
               >
-                {step > item.num ? '✓' : item.num}
+                {step > item.num ? <CheckCircle2 className="h-5 w-5" /> : item.num}
               </div>
-              <span className={`mt-2 text-xs font-semibold hidden sm:block ${
-                step === item.num ? 'text-[#2675F5]' : 'text-slate-500'
-              }`}>
+              <span
+                className={`mt-2 text-xs font-semibold hidden sm:block ${
+                  step === item.num ? 'text-[#101B35]' : 'text-slate-400'
+                }`}
+              >
                 {item.label}
               </span>
             </div>
@@ -263,40 +287,43 @@ function BookingFlow() {
         </div>
       </div>
 
-      {/* Interactive Step Container */}
+      {/* Main Form Box */}
       <div className="rounded-3xl bg-white p-6 sm:p-10 shadow-card border border-slate-200">
-        {/* ================= STEP 1: SELECT SESSION TYPE ================= */}
+        {/* ================= STEP 1: SELECT PROGRAM ================= */}
         {step === 1 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-[#101B35]">Step 1: Select Session Type</h2>
-              <p className="text-xs text-slate-500 mt-1">Choose between private coaching, group drills, or table rental.</p>
+              <h2 className="text-xl font-bold text-[#101B35]">Step 1: Choose Your Program</h2>
+              <p className="text-xs text-slate-500 mt-1">Select the training track or court reservation you need.</p>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {(Object.keys(PROGRAM_DETAILS) as Array<'personal' | 'group' | 'table'>).map((key) => {
-                const prog = PROGRAM_DETAILS[key];
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {PROGRAM_CARDS.map((prog) => {
+                const isSelected = form.bookingType === prog.type;
                 const Icon = prog.icon;
-                const isSelected = booking.type === key;
 
                 return (
                   <div
-                    key={key}
-                    onClick={() => setBooking({ ...booking, type: key })}
-                    className={`cursor-pointer rounded-2xl p-5 border-2 transition-all duration-200 relative flex flex-col justify-between ${
+                    key={prog.type}
+                    onClick={() => setForm({ ...form, bookingType: prog.type })}
+                    className={`cursor-pointer rounded-2xl p-6 transition-all border-2 flex flex-col justify-between ${
                       isSelected
-                        ? 'border-[#2675F5] bg-blue-50/40 shadow-md ring-2 ring-[#2675F5]/20'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                        ? 'border-[#2675F5] bg-blue-50/50 shadow-md ring-2 ring-[#2675F5]/20'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
                     }`}
                   >
-                    {isSelected && (
-                      <div className="absolute top-3 right-3 text-[#2675F5]">
-                        <CheckCircle2 className="h-5 w-5" />
-                      </div>
-                    )}
                     <div>
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-xl mb-3 ${
-                        isSelected ? 'bg-[#2675F5] text-white' : 'bg-slate-100 text-slate-600'
+                      <div className="flex justify-between items-start mb-4">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider rounded-full px-2.5 py-0.5 ${
+                          isSelected ? 'bg-[#2675F5] text-white' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {prog.badge}
+                        </span>
+                        {isSelected && <CheckCircle2 className="h-5 w-5 text-[#2675F5]" />}
+                      </div>
+
+                      <div className={`h-10 w-10 rounded-xl flex items-center justify-center mb-3 ${
+                        isSelected ? 'bg-[#2675F5] text-white' : 'bg-slate-100 text-slate-700'
                       }`}>
                         <Icon className="h-5 w-5" />
                       </div>
@@ -306,7 +333,7 @@ function BookingFlow() {
 
                     <div className="mt-6 pt-3 border-t border-slate-200/80">
                       <span className="text-lg font-extrabold text-[#101B35]">
-                        LKR {prog.ratePerHour.toLocaleString()}
+                        LKR {prog.hourlyRate.toLocaleString()}
                       </span>
                       <span className="text-xs text-slate-500 font-medium"> / hr</span>
                     </div>
@@ -321,23 +348,23 @@ function BookingFlow() {
                 onClick={handleNextStep}
                 className="flex items-center gap-2 rounded-xl bg-[#2675F5] px-7 py-3 text-sm font-semibold text-white shadow-md shadow-blue-500/25 hover:bg-blue-600 transition"
               >
-                <span>Continue to Date & Time</span>
+                <span>Continue to Date & Availability</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>
           </div>
         )}
 
-        {/* ================= STEP 2: DATE & TIME SLOT ================= */}
+        {/* ================= STEP 2: DATE & TIME AVAILABILITY ================= */}
         {step === 2 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-[#101B35]">Step 2: Choose Date & Preferred Slot</h2>
-              <p className="text-xs text-slate-500 mt-1">Select your preferred date, hour, and booking duration.</p>
+              <h2 className="text-xl font-bold text-[#101B35]">Step 2: Choose Date & Check Court Schedule</h2>
+              <p className="text-xs text-slate-500 mt-1">Live availability queried directly from Supabase for our single competition table.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Date Selector */}
+              {/* Date Input */}
               <div>
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block mb-2">
                   Select Date
@@ -345,16 +372,23 @@ function BookingFlow() {
                 <div className="relative">
                   <input
                     type="date"
-                    value={booking.date}
+                    value={form.bookingDate}
                     min={todayStr || undefined}
-                    onChange={(e) => setBooking({ ...booking, date: e.target.value })}
+                    onChange={(e) => {
+                      const newDate = e.target.value;
+                      setForm({ ...form, bookingDate: newDate });
+                      fetchSlotsForDate(newDate, form.durationMinutes);
+                    }}
                     className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#101B35] focus:border-[#2675F5] focus:outline-none focus:ring-2 focus:ring-[#2675F5]/20 shadow-sm"
                   />
                   <CalendarIcon className="absolute right-3.5 top-3.5 h-4 w-4 text-slate-400 pointer-events-none" />
                 </div>
-                <p className="mt-2 text-[11px] text-slate-500">
-                  Open 7 days a week (Mon–Sat 6AM–10PM, Sun 7AM–9PM)
-                </p>
+                {dayAvailability && !dayAvailability.isClosed && (
+                  <p className="mt-2 text-xs text-emerald-600 font-medium flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>Operating Hours: {dayAvailability.openTime} – {dayAvailability.closeTime}</span>
+                  </p>
+                )}
               </div>
 
               {/* Duration Selector */}
@@ -363,51 +397,94 @@ function BookingFlow() {
                   Session Duration
                 </label>
                 <div className="grid grid-cols-3 gap-2">
-                  {[1, 2, 3].map((hr) => (
+                  {[
+                    { label: '30 Min', mins: 30 },
+                    { label: '1 Hour', mins: 60 },
+                    { label: '1.5 Hours', mins: 90 },
+                    { label: '2 Hours', mins: 120 },
+                    { label: '2.5 Hours', mins: 150 },
+                    { label: '3 Hours', mins: 180 },
+                  ].map((dur) => (
                     <button
-                      key={hr}
+                      key={dur.mins}
                       type="button"
-                      onClick={() => setBooking({ ...booking, durationHours: hr })}
-                      className={`rounded-xl py-3 text-sm font-semibold transition border ${
-                        booking.durationHours === hr
+                      onClick={() => {
+                        setForm({ ...form, durationMinutes: dur.mins });
+                        fetchSlotsForDate(form.bookingDate, dur.mins);
+                      }}
+                      className={`rounded-xl py-2.5 text-xs font-semibold transition border ${
+                        form.durationMinutes === dur.mins
                           ? 'border-[#2675F5] bg-[#2675F5] text-white shadow-md'
                           : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                       }`}
                     >
-                      {hr} Hour{hr > 1 ? 's' : ''}
+                      {dur.label}
                     </button>
                   ))}
                 </div>
-                <p className="mt-2 text-[11px] text-slate-500">
-                  Calculated rate: LKR {(currentProgram.ratePerHour * booking.durationHours).toLocaleString()}
+                <p className="mt-2 text-xs font-semibold text-[#101B35]">
+                  Calculated Amount: <span className="text-[#2675F5]">LKR {totalPrice.toLocaleString()}</span>
                 </p>
               </div>
             </div>
 
-            {/* Time Slots Grid */}
-            <div className="pt-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block mb-3">
-                Select Starting Time Slot
-              </label>
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5">
-                {TIME_SLOTS.map((slot) => {
-                  const isSelected = booking.timeSlot === slot;
-                  return (
-                    <button
-                      key={slot}
-                      type="button"
-                      onClick={() => setBooking({ ...booking, timeSlot: slot })}
-                      className={`rounded-xl py-2.5 px-2 text-xs font-semibold transition border text-center ${
-                        isSelected
-                          ? 'border-[#2675F5] bg-[#2675F5] text-white shadow-md'
-                          : 'border-slate-200 bg-[#F5F7FB] text-slate-700 hover:bg-slate-200'
-                      }`}
-                    >
-                      {slot}
-                    </button>
-                  );
-                })}
+            {/* Error Message if closed */}
+            {slotError && (
+              <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3.5 text-xs text-amber-800">
+                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+                <span>{slotError}</span>
               </div>
+            )}
+
+            {/* Slots Grid */}
+            <div className="pt-2">
+              <div className="flex justify-between items-center mb-3">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                  Select Starting Slot ({form.durationMinutes} min session)
+                </label>
+                {isPendingSlots && (
+                  <span className="text-xs text-[#2675F5] flex items-center gap-1 font-medium">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Checking table schedule...</span>
+                  </span>
+                )}
+              </div>
+
+              {dayAvailability?.isClosed ? (
+                <div className="rounded-2xl bg-slate-50 p-6 text-center text-xs text-slate-500 border border-slate-200">
+                  {dayAvailability.message || 'No slots available for this date.'}
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5 max-h-64 overflow-y-auto p-1">
+                  {dayAvailability?.slots.map((slot) => {
+                    const isSelected = form.startTime === slot.time;
+                    return (
+                      <button
+                        key={slot.time}
+                        type="button"
+                        disabled={!slot.isAvailable}
+                        onClick={() => setForm({ ...form, startTime: slot.time })}
+                        className={`rounded-xl py-2 px-1 text-xs font-semibold transition border text-center relative ${
+                          !slot.isAvailable
+                            ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed line-through'
+                            : isSelected
+                            ? 'border-[#2675F5] bg-[#2675F5] text-white shadow-md ring-2 ring-[#2675F5]/30'
+                            : 'border-slate-200 bg-white text-slate-700 hover:border-[#2675F5] hover:bg-blue-50/50'
+                        }`}
+                        title={slot.isAvailable ? `${slot.displayTime} to ${slot.displayEndTime}` : `${slot.displayTime} (${slot.reason || 'Unavailable'})`}
+                      >
+                        {slot.displayTime}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {selectedSlot && (
+                <p className="mt-3 text-xs text-slate-600 bg-[#F5F7FB] p-3 rounded-xl border border-slate-200">
+                  Selected Session: <strong className="text-[#101B35]">{selectedSlot.displayTime} – {selectedSlot.displayEndTime}</strong> ({form.durationMinutes} minutes) on {form.bookingDate}
+                </p>
+              )}
             </div>
 
             {/* Step 2 Actions */}
@@ -422,7 +499,8 @@ function BookingFlow() {
 
               <button
                 onClick={handleNextStep}
-                className="flex items-center gap-2 rounded-xl bg-[#2675F5] px-7 py-3 text-sm font-semibold text-white shadow-md shadow-blue-500/25 hover:bg-blue-600 transition"
+                disabled={dayAvailability?.isClosed || !form.startTime}
+                className="flex items-center gap-2 rounded-xl bg-[#2675F5] px-7 py-3 text-sm font-semibold text-white shadow-md shadow-blue-500/25 hover:bg-blue-600 transition disabled:opacity-50"
               >
                 <span>Continue to Player Details</span>
                 <ArrowRight className="h-4 w-4" />
@@ -436,7 +514,7 @@ function BookingFlow() {
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-bold text-[#101B35]">Step 3: Player Information</h2>
-              <p className="text-xs text-slate-500 mt-1">Please provide your contact information to reserve the slot.</p>
+              <p className="text-xs text-slate-500 mt-1">Please provide contact and training details for this reservation.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -447,45 +525,21 @@ function BookingFlow() {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="e.g. Ruwan Perera"
-                    value={booking.fullName}
+                    placeholder="e.g. Kasun Fernando"
+                    value={form.customerName}
                     onChange={(e) => {
-                      setBooking({ ...booking, fullName: e.target.value });
-                      if (formErrors.fullName) setFormErrors({ ...formErrors, fullName: '' });
+                      setForm({ ...form, customerName: e.target.value });
+                      if (formErrors.customerName) setFormErrors({ ...formErrors, customerName: '' });
                     }}
                     className={`w-full rounded-xl border bg-white px-4 py-3 pl-10 text-sm text-[#101B35] focus:outline-none focus:ring-2 shadow-sm ${
-                      formErrors.fullName
+                      formErrors.customerName
                         ? 'border-red-500 focus:ring-red-400'
                         : 'border-slate-300 focus:border-[#2675F5] focus:ring-[#2675F5]/20'
                     }`}
                   />
                   <User className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
                 </div>
-                {formErrors.fullName && <p className="text-xs text-red-500 mt-1">{formErrors.fullName}</p>}
-              </div>
-
-              <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block mb-1.5">
-                  Email Address *
-                </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    placeholder="ruwan@example.com"
-                    value={booking.email}
-                    onChange={(e) => {
-                      setBooking({ ...booking, email: e.target.value });
-                      if (formErrors.email) setFormErrors({ ...formErrors, email: '' });
-                    }}
-                    className={`w-full rounded-xl border bg-white px-4 py-3 pl-10 text-sm text-[#101B35] focus:outline-none focus:ring-2 shadow-sm ${
-                      formErrors.email
-                        ? 'border-red-500 focus:ring-red-400'
-                        : 'border-slate-300 focus:border-[#2675F5] focus:ring-[#2675F5]/20'
-                    }`}
-                  />
-                  <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
-                </div>
-                {formErrors.email && <p className="text-xs text-red-500 mt-1">{formErrors.email}</p>}
+                {formErrors.customerName && <p className="text-xs text-red-500 mt-1">{formErrors.customerName}</p>}
               </div>
 
               <div>
@@ -495,21 +549,41 @@ function BookingFlow() {
                 <div className="relative">
                   <input
                     type="tel"
-                    placeholder="+94 75 639 9105"
-                    value={booking.phone}
+                    placeholder="+94 7X XXX XXXX"
+                    value={form.customerPhone}
                     onChange={(e) => {
-                      setBooking({ ...booking, phone: e.target.value });
-                      if (formErrors.phone) setFormErrors({ ...formErrors, phone: '' });
+                      setForm({ ...form, customerPhone: e.target.value });
+                      if (formErrors.customerPhone) setFormErrors({ ...formErrors, customerPhone: '' });
                     }}
                     className={`w-full rounded-xl border bg-white px-4 py-3 pl-10 text-sm text-[#101B35] focus:outline-none focus:ring-2 shadow-sm ${
-                      formErrors.phone
+                      formErrors.customerPhone
                         ? 'border-red-500 focus:ring-red-400'
                         : 'border-slate-300 focus:border-[#2675F5] focus:ring-[#2675F5]/20'
                     }`}
                   />
                   <Phone className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
                 </div>
-                {formErrors.phone && <p className="text-xs text-red-500 mt-1">{formErrors.phone}</p>}
+                {formErrors.customerPhone && <p className="text-xs text-red-500 mt-1">{formErrors.customerPhone}</p>}
+              </div>
+
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block mb-1.5">
+                  Email Address (Optional)
+                </label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    placeholder="kasun@example.com"
+                    value={form.customerEmail}
+                    onChange={(e) => {
+                      setForm({ ...form, customerEmail: e.target.value });
+                      if (formErrors.customerEmail) setFormErrors({ ...formErrors, customerEmail: '' });
+                    }}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pl-10 text-sm text-[#101B35] focus:border-[#2675F5] focus:outline-none focus:ring-2 focus:ring-[#2675F5]/20 shadow-sm"
+                  />
+                  <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
+                </div>
+                {formErrors.customerEmail && <p className="text-xs text-red-500 mt-1">{formErrors.customerEmail}</p>}
               </div>
 
               <div>
@@ -517,30 +591,79 @@ function BookingFlow() {
                   Current Skill Level
                 </label>
                 <select
-                  value={booking.skillLevel}
+                  value={form.skillLevel}
                   onChange={(e) =>
-                    setBooking({
-                      ...booking,
+                    setForm({
+                      ...form,
                       skillLevel: e.target.value as 'beginner' | 'intermediate' | 'advanced',
                     })
                   }
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#101B35] focus:border-[#2675F5] focus:outline-none focus:ring-2 focus:ring-[#2675F5]/20 shadow-sm"
                 >
-                  <option value="beginner">Beginner (Learning Basics & Grip)</option>
-                  <option value="intermediate">Intermediate (Consistent rallies & footwork)</option>
-                  <option value="advanced">Advanced / Tournament Competitor</option>
+                  <option value="beginner">Beginner (Fundamentals & Grip)</option>
+                  <option value="intermediate">Intermediate (Rallies & Spin)</option>
+                  <option value="advanced">Advanced (Tournament Match Play)</option>
                 </select>
+              </div>
+
+              {/* Group Participants Selector */}
+              {form.bookingType === BOOKING_TYPES.GROUP_COACHING && (
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block mb-1.5">
+                    Number of Group Participants
+                  </label>
+                  <div className="flex items-center gap-3">
+                    {[2, 3, 4, 5, 6].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => setForm({ ...form, participantsCount: num })}
+                        className={`h-11 w-12 rounded-xl text-sm font-bold border transition ${
+                          form.participantsCount === num
+                            ? 'bg-[#2675F5] text-white border-[#2675F5]'
+                            : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                    <span className="text-xs text-slate-500 ml-2">Max 6 players per group</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Guardian Info */}
+              <div className="sm:col-span-2 pt-2 border-t border-slate-100">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">
+                  Guardian Details (For Junior Players)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    placeholder="Guardian Full Name (Optional)"
+                    value={form.guardianName}
+                    onChange={(e) => setForm({ ...form, guardianName: e.target.value })}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs text-[#101B35] focus:border-[#2675F5] focus:outline-none"
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Guardian Contact Phone (Optional)"
+                    value={form.guardianPhone}
+                    onChange={(e) => setForm({ ...form, guardianPhone: e.target.value })}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs text-[#101B35] focus:border-[#2675F5] focus:outline-none"
+                  />
+                </div>
               </div>
 
               <div className="sm:col-span-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block mb-1.5">
-                  Special Notes / Specific Focus (Optional)
+                  Special Notes / Training Goals (Optional)
                 </label>
                 <textarea
-                  rows={3}
-                  placeholder="e.g. Want to work on backhand flick and reverse pendulum service..."
-                  value={booking.notes}
-                  onChange={(e) => setBooking({ ...booking, notes: e.target.value })}
+                  rows={2}
+                  placeholder="e.g. Focus on pendulum serve return and backhand footwork..."
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#101B35] focus:border-[#2675F5] focus:outline-none focus:ring-2 focus:ring-[#2675F5]/20 shadow-sm"
                 />
               </div>
@@ -567,14 +690,33 @@ function BookingFlow() {
           </div>
         )}
 
-        {/* ================= STEP 4: SUMMARY & CONFIRMATION ================= */}
+        {/* ================= STEP 4: REVIEW & SUBMIT REQUEST ================= */}
         {step === 4 && (
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-bold text-[#101B35]">Step 4: Review Booking Summary</h2>
-              <p className="text-xs text-slate-500 mt-1">Review your session details before confirming your reservation.</p>
+              <p className="text-xs text-slate-500 mt-1">Review your session details before submitting your reservation request.</p>
             </div>
 
+            {submitError && (
+              <div className="flex items-start gap-2.5 rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-xs text-red-700">
+                <AlertCircle className="h-5 w-5 shrink-0 text-red-600 mt-0.5" />
+                <span>{submitError}</span>
+              </div>
+            )}
+
+            {/* Pending Notice */}
+            <div className="flex items-start gap-3 rounded-2xl bg-amber-50 p-4 border border-amber-200 text-xs text-amber-900">
+              <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-amber-950">Pending Coach Review Policy</p>
+                <p className="mt-0.5">
+                  NextGen TT operates <strong>one ITTF competition table</strong>. Your requested slot will be held in <strong className="font-semibold">PENDING</strong> status until Coach Chanul Dulsen confirms your appointment.
+                </p>
+              </div>
+            </div>
+
+            {/* Summary Card */}
             <div className="rounded-2xl bg-[#F5F7FB] p-6 border border-slate-200 space-y-4">
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-slate-200 pb-4">
                 <div>
@@ -589,28 +731,36 @@ function BookingFlow() {
                     LKR {totalPrice.toLocaleString()}
                   </span>
                   <p className="text-xs text-slate-500">
-                    ({booking.durationHours} hr × LKR {currentProgram.ratePerHour.toLocaleString()})
+                    ({form.durationMinutes} mins @ LKR {currentProgram.hourlyRate.toLocaleString()}/hr)
                   </p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-slate-600 pt-1">
                 <div>
-                  <p className="text-xs font-semibold text-slate-400">Date & Start Time</p>
+                  <p className="text-xs font-semibold text-slate-400">Date & Slot</p>
                   <p className="font-bold text-[#101B35] mt-0.5">
-                    {booking.date} at {booking.timeSlot}
+                    {form.bookingDate} at {selectedSlot ? selectedSlot.displayTime : form.startTime}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Duration: {form.durationMinutes} Minutes (Ends at {selectedSlot ? selectedSlot.displayEndTime : ''})
                   </p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-slate-400">Player Details</p>
-                  <p className="font-bold text-[#101B35] mt-0.5">{booking.fullName}</p>
-                  <p className="text-xs text-slate-500">{booking.phone} • {booking.email}</p>
+                  <p className="font-bold text-[#101B35] mt-0.5">{form.customerName}</p>
+                  <p className="text-xs text-slate-500">{form.customerPhone} {form.customerEmail ? `• ${form.customerEmail}` : ''}</p>
+                  {form.bookingType === BOOKING_TYPES.GROUP_COACHING && (
+                    <p className="text-xs text-indigo-600 font-semibold mt-1">
+                      Squad Size: {form.participantsCount} players
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {booking.notes && (
+              {form.notes && (
                 <div className="border-t border-slate-200 pt-3 text-xs text-slate-600">
-                  <span className="font-bold text-[#101B35]">Notes:</span> {booking.notes}
+                  <span className="font-bold text-[#101B35]">Special Notes:</span> {form.notes}
                 </div>
               )}
             </div>
@@ -622,7 +772,7 @@ function BookingFlow() {
                 <div>
                   <p className="font-bold text-amber-950">Complimentary Pool Table</p>
                   <p className="mt-0.5">
-                    Full access to our pool table included during your booked session.
+                    Complimentary access to the pool table is included for player and guardian during this booked session.
                   </p>
                 </div>
               </div>
@@ -632,7 +782,7 @@ function BookingFlow() {
                 <div>
                   <p className="font-bold text-emerald-950">Pay In Person at Academy</p>
                   <p className="mt-0.5">
-                    No card required online. Cash or local transfer accepted upon arrival.
+                    No online payment required. Pay in cash or local transfer when you arrive.
                   </p>
                 </div>
               </div>
@@ -642,18 +792,29 @@ function BookingFlow() {
             <div className="flex justify-between items-center pt-6 border-t border-slate-100">
               <button
                 onClick={handlePrevStep}
-                className="flex items-center gap-2 rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
+                disabled={isSubmitting}
+                className="flex items-center gap-2 rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
               >
                 <ArrowLeft className="h-4 w-4" />
                 <span>Back</span>
               </button>
 
               <button
-                onClick={handleConfirmBooking}
-                className="flex items-center gap-2 rounded-xl bg-[#2675F5] px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:bg-blue-600 transition"
+                onClick={handleSubmitBooking}
+                disabled={isSubmitting}
+                className="flex items-center gap-2 rounded-xl bg-[#2675F5] px-8 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:bg-blue-600 transition disabled:opacity-50"
               >
-                <span>Confirm Reservation</span>
-                <CheckCircle2 className="h-4 w-4" />
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Submitting Request...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Submit Booking Request</span>
+                    <CheckCircle2 className="h-4 w-4" />
+                  </>
+                )}
               </button>
             </div>
           </div>

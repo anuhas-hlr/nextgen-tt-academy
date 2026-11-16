@@ -40,17 +40,17 @@ const GALLERY_ITEMS: GalleryItem[] = [
     category: 'coaching',
     categoryLabel: 'Coaching Sessions',
     imageSrc: '/images/coach-action-doubles.jpg',
-    caption: 'Hands-on multiball drill and return-of-serve positioning with student athlete at the ITTF tournament table.',
+    caption: 'Hands-on multiball drill and return-of-serve positioning with student athlete at the competition table.',
     badge: '1-on-1 Session',
   },
   {
     id: '3',
-    title: 'Asian ITTF Championship Rally',
+    title: 'Championship Tournament Rally',
     category: 'competitions',
-    categoryLabel: 'International Circuit',
+    categoryLabel: 'Tournament Match Play',
     imageSrc: '/images/coach-tournament-1.jpg',
-    caption: 'Chanul representing Sri Lanka on the international stage, executing high-speed topspin counter loops.',
-    badge: 'International Play',
+    caption: 'Chanul competing in official championship tournament play, executing high-speed topspin counter loops.',
+    badge: 'Tournament Play',
   },
   {
     id: '4',
@@ -87,7 +87,7 @@ export default function GalleryPage() {
             NextGen Photo Gallery
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base sm:text-lg text-slate-300 leading-relaxed">
-            Witness the discipline, intensity, and international tournament pedigree that Coach Chanul Dulsen brings to NextGen TT Academy.
+            Witness the discipline, intensity, and championship tournament experience that Coach Chanul Dulsen brings to NextGen TT Academy.
           </p>
         </div>
       </section>

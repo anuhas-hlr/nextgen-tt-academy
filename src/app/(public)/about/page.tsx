@@ -52,7 +52,7 @@ export default function AboutPage() {
                 Born From Competitive Passion & National Pride
               </h2>
               <p className="text-base text-slate-600 leading-relaxed">
-                Table tennis in Sri Lanka has immense raw talent, but often lacks the systematic, data-informed training regimens found in top Asian and European academies. Having represented Sri Lanka at the highest national and international levels, <strong className="text-[#101B35]">Chanul Dulsen</strong> recognized this gap.
+                Table tennis in Sri Lanka has immense raw talent, but often lacks structured, high-intensity training regimens. As Sri Lanka's National No. 1 player and coach at Horizon College, <strong className="text-[#101B35]">Chanul Dulsen</strong> recognized this opportunity to elevate the sport.
               </p>
               <p className="text-base text-slate-600 leading-relaxed">
                 NextGen Table Tennis Academy was conceived to bridge this gap: offering individual attention, high-volume multiball drills, video analysis, and tactical match strategy in a premier, climate-controlled Colombo facility.
@@ -70,7 +70,7 @@ export default function AboutPage() {
               <div className="relative rounded-3xl overflow-hidden border-2 border-[#2675F5]/30 shadow-2xl bg-[#101B35]">
                 <Image
                   src="/images/coach-tournament-1.jpg"
-                  alt="Chanul Dulsen competing internationally"
+                  alt="Chanul Dulsen in tournament competition"
                   width={650}
                   height={500}
                   className="w-full h-[400px] object-cover transition-transform duration-500 hover:scale-105"
@@ -139,7 +139,7 @@ export default function AboutPage() {
                 </div>
                 <h3 className="text-2xl font-bold text-white">Our Vision</h3>
                 <p className="mt-4 text-base text-slate-300 leading-relaxed">
-                  To establish NextGen as Sri Lanka's benchmark table tennis development hub, recognized internationally for producing disciplined competitors who excel on national and global podiums.
+                  To establish NextGen as Sri Lanka's benchmark table tennis development hub, recognized for producing disciplined competitors who excel on national podiums.
                 </p>
                 <ul className="mt-6 space-y-3 text-sm text-slate-300 border-t border-white/10 pt-6">
                   <li className="flex items-center gap-2">

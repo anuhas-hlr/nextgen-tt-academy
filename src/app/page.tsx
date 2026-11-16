@@ -160,7 +160,7 @@ export default function HomePage() {
                   <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-md mt-6">
                     <Image
                       src="/images/coach-tournament-1.jpg"
-                      alt="Chanul Dulsen playing in international tournament"
+                      alt="Chanul Dulsen in championship tournament competition"
                       width={400}
                       height={450}
                       className="h-60 sm:h-72 w-full object-cover transition-transform duration-500 hover:scale-105"
@@ -170,10 +170,10 @@ export default function HomePage() {
 
                 <div className="mt-4 rounded-2xl bg-[#F5F7FB] border border-slate-200 p-4 text-center">
                   <p className="text-xs font-semibold uppercase tracking-wider text-[#2675F5]">
-                    National Representation
+                    National Leadership
                   </p>
                   <p className="text-sm font-bold text-[#101B35] mt-0.5">
-                    Representing Sri Lanka in ITTF International & Asian Championships
+                    Sri Lanka National No. 1 & Head Coach at Horizon College
                   </p>
                 </div>
               </div>
@@ -194,9 +194,9 @@ export default function HomePage() {
 
                 <p className="text-base text-slate-600 leading-relaxed">
                   Chanul Dulsen stands at the pinnacle of Sri Lankan table tennis as the current 
-                  <strong> National No. 1 ranked player</strong>. With years of high-stakes international tournament play 
-                  and a proven coaching pedigree at prestigious institutions including <strong>Horizon College</strong>, 
-                  Chanul brings modern professional methodologies to players of all skill brackets.
+                  <strong> National No. 1 ranked player</strong>. With proven championship experience 
+                  and an active coaching role at <strong>Horizon College</strong>, 
+                  Chanul brings modern sports methodologies to players of all skill brackets.
                 </p>
 
                 <p className="text-base text-slate-600 leading-relaxed">
@@ -225,8 +225,8 @@ export default function HomePage() {
                   <div className="flex items-start gap-3 rounded-xl bg-[#F5F7FB] p-3.5 border border-slate-200/80">
                     <CircleDot className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-bold text-[#101B35]">International Competitor</p>
-                      <p className="text-xs text-slate-500">Asian & International ITTF circuits</p>
+                      <p className="text-sm font-bold text-[#101B35]">Professional Coach</p>
+                      <p className="text-xs text-slate-500">Modern technical coaching & drills</p>
                     </div>
                   </div>
 
@@ -493,7 +493,7 @@ export default function HomePage() {
                       Tournament Standard Training
                     </p>
                     <p className="text-lg font-bold">
-                      Train on the exact equipment and standards used in international championships.
+                      Train on tournament-standard equipment with national championship guidance.
                     </p>
                   </div>
                 </div>

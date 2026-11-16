@@ -133,9 +133,9 @@ export default function CoachPage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 mb-6">
                 <Medal className="h-6 w-6" />
               </div>
-              <h3 className="text-xl font-bold text-[#101B35]">International ITTF Competitor</h3>
+              <h3 className="text-xl font-bold text-[#101B35]">Professional Coach</h3>
               <p className="mt-3 text-sm text-slate-600 leading-relaxed">
-                Has donned the national colors representing Sri Lanka at Asian and international ITTF circuits, competing against world-ranked players across Asia.
+                Dedicated professional coach delivering technical biomechanics, high-volume multiball drills, and tactical match strategy for junior and senior players.
               </p>
             </div>
           </div>
@@ -150,7 +150,7 @@ export default function CoachPage() {
               In Action
             </span>
             <h2 className="text-3xl font-extrabold text-[#101B35] sm:text-4xl">
-              On the International & Coaching Stages
+              In Competition & High-Performance Coaching
             </h2>
           </div>
 
