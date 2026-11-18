@@ -180,22 +180,26 @@ export default function AdminSettingsPage() {
     });
   };
 
+  // Shared input class
+  const inputClass = 'w-full rounded-lg border border-slate-300 bg-white p-2 text-[#101B35] font-mono focus:border-[#2675F5] focus:outline-none focus:ring-2 focus:ring-[#2675F5]/20 text-sm';
+  const selectClass = 'w-full rounded-lg border border-slate-300 bg-white p-2 text-[#101B35] focus:border-[#2675F5] focus:outline-none focus:ring-2 focus:ring-[#2675F5]/20';
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
-            <Settings className="h-7 w-7 text-blue-500" />
-            Academy Configuration & Pricing Rules
+          <h1 className="text-2xl font-bold tracking-tight text-[#101B35] flex items-center gap-2.5">
+            <Settings className="h-7 w-7 text-[#2675F5]" />
+            Academy Configuration &amp; Pricing Rules
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-slate-500">
             Control hourly rates, opening hours, booking intervals, complimentary pool policies, and holiday blocks.
           </p>
         </div>
 
         {saveMessage && (
-          <div className="flex items-center gap-2 rounded-lg bg-emerald-500/20 px-3.5 py-2 text-xs font-semibold text-emerald-400 border border-emerald-500/30">
+          <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-700 border border-emerald-200">
             <CheckCircle className="h-4 w-4" />
             {saveMessage}
           </div>
@@ -203,7 +207,7 @@ export default function AdminSettingsPage() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
         {[
           { key: 'pricing', label: 'Service Pricing & Capacity', icon: DollarSign },
           { key: 'hours', label: 'Operating Timings', icon: Clock },
@@ -219,8 +223,8 @@ export default function AdminSettingsPage() {
               onClick={() => setActiveTab(tab.key as any)}
               className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition ${
                 isActive
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                  ? 'bg-[#2675F5] text-white shadow-sm'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-[#101B35]'
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -233,9 +237,9 @@ export default function AdminSettingsPage() {
       {/* Tab 1: Service Pricing & Capacity */}
       {activeTab === 'pricing' && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-white mb-1">Live Service Hourly Rates</h2>
-            <p className="text-xs text-slate-400 mb-6">
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-[#101B35] mb-1">Live Service Hourly Rates</h2>
+            <p className="text-xs text-slate-500 mb-6">
               Prices are dynamically read from the database by both the booking wizard and public programs pages.
             </p>
 
@@ -243,19 +247,19 @@ export default function AdminSettingsPage() {
               {services.map((svc, idx) => (
                 <div
                   key={svc.id}
-                  className="rounded-xl border border-slate-800 bg-slate-950/60 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  className="rounded-xl border border-slate-200 bg-[#F5F7FB] p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
                 >
                   <div className="space-y-1 max-w-md">
-                    <span className="font-bold text-white text-base">{svc.title}</span>
-                    <p className="text-xs text-slate-400">{svc.description}</p>
-                    <span className="inline-block text-[10px] text-slate-500 font-mono">
+                    <span className="font-bold text-[#101B35] text-base">{svc.title}</span>
+                    <p className="text-xs text-slate-500">{svc.description}</p>
+                    <span className="inline-block text-[10px] text-slate-400 font-mono">
                       Slug: {svc.slug}
                     </span>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-4">
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">
                         Hourly Rate (LKR)
                       </label>
                       <input
@@ -268,12 +272,12 @@ export default function AdminSettingsPage() {
                             prev.map((s) => (s.id === svc.id ? { ...s, price_lkr: val } : s))
                           );
                         }}
-                        className="w-32 rounded-lg border border-slate-800 bg-slate-900 p-2 text-sm text-white font-mono focus:border-blue-500 focus:outline-none"
+                        className="w-32 rounded-lg border border-slate-300 bg-white p-2 text-sm text-[#101B35] font-mono focus:border-[#2675F5] focus:outline-none focus:ring-2 focus:ring-[#2675F5]/20"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                      <label className="block text-[11px] font-semibold text-slate-500 mb-1">
                         Max Capacity
                       </label>
                       <input
@@ -287,7 +291,7 @@ export default function AdminSettingsPage() {
                             prev.map((s) => (s.id === svc.id ? { ...s, max_capacity: val } : s))
                           );
                         }}
-                        className="w-24 rounded-lg border border-slate-800 bg-slate-900 p-2 text-sm text-white font-mono focus:border-blue-500 focus:outline-none"
+                        className="w-24 rounded-lg border border-slate-300 bg-white p-2 text-sm text-[#101B35] font-mono focus:border-[#2675F5] focus:outline-none focus:ring-2 focus:ring-[#2675F5]/20"
                       />
                     </div>
 
@@ -295,7 +299,7 @@ export default function AdminSettingsPage() {
                       <button
                         onClick={() => handleSavePricing(svc)}
                         disabled={isPending}
-                        className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-500 transition disabled:opacity-50"
+                        className="flex items-center gap-1.5 rounded-lg bg-[#2675F5] px-4 py-2 text-xs font-semibold text-white hover:bg-blue-600 transition disabled:opacity-50"
                       >
                         <Save className="h-3.5 w-3.5" />
                         Save
@@ -311,15 +315,15 @@ export default function AdminSettingsPage() {
 
       {/* Tab 2: Operating Timings */}
       {activeTab === 'hours' && (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl space-y-4">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
           <div>
-            <h2 className="text-lg font-bold text-white mb-1">Weekly Operating Schedule</h2>
-            <p className="text-xs text-slate-400">
+            <h2 className="text-lg font-bold text-[#101B35] mb-1">Weekly Operating Schedule</h2>
+            <p className="text-xs text-slate-500">
               Only active days and slots within opening hours can be booked by players.
             </p>
           </div>
 
-          <div className="divide-y divide-slate-800/60">
+          <div className="divide-y divide-slate-100">
             {availability.map((rule) => (
               <div
                 key={rule.id}
@@ -335,13 +339,13 @@ export default function AdminSettingsPage() {
                         prev.map((r) => (r.id === rule.id ? { ...r, is_active: checked } : r))
                       );
                     }}
-                    className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-blue-600"
+                    className="h-4 w-4 rounded border-slate-300 text-[#2675F5]"
                   />
                   <div>
-                    <span className="font-bold text-sm text-white">
+                    <span className="font-bold text-sm text-[#101B35]">
                       {DAY_NAMES[rule.day_of_week]}
                     </span>
-                    <span className="ml-2 text-[10px] text-slate-500">
+                    <span className="ml-2 text-[10px] text-slate-400">
                       {rule.is_active ? 'Open' : 'Closed'}
                     </span>
                   </div>
@@ -349,7 +353,7 @@ export default function AdminSettingsPage() {
 
                 <div className="flex flex-wrap items-center gap-3 text-xs">
                   <div>
-                    <label className="text-[10px] text-slate-400 block mb-1">Open</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">Open</label>
                     <input
                       type="time"
                       value={rule.open_time.slice(0, 5)}
@@ -359,12 +363,12 @@ export default function AdminSettingsPage() {
                           prev.map((r) => (r.id === rule.id ? { ...r, open_time: val } : r))
                         );
                       }}
-                      className="rounded-lg border border-slate-800 bg-slate-950 p-1.5 text-white font-mono"
+                      className="rounded-lg border border-slate-300 bg-white p-1.5 text-[#101B35] font-mono focus:border-[#2675F5] focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-400 block mb-1">Close</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">Close</label>
                     <input
                       type="time"
                       value={rule.close_time.slice(0, 5)}
@@ -374,12 +378,12 @@ export default function AdminSettingsPage() {
                           prev.map((r) => (r.id === rule.id ? { ...r, close_time: val } : r))
                         );
                       }}
-                      className="rounded-lg border border-slate-800 bg-slate-950 p-1.5 text-white font-mono"
+                      className="rounded-lg border border-slate-300 bg-white p-1.5 text-[#101B35] font-mono focus:border-[#2675F5] focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[10px] text-slate-400 block mb-1">Slot Step</label>
+                    <label className="text-[10px] text-slate-500 block mb-1">Slot Step</label>
                     <select
                       value={rule.slot_interval_minutes}
                       onChange={(e) => {
@@ -388,7 +392,7 @@ export default function AdminSettingsPage() {
                           prev.map((r) => (r.id === rule.id ? { ...r, slot_interval_minutes: val } : r))
                         );
                       }}
-                      className="rounded-lg border border-slate-800 bg-slate-950 p-1.5 text-white"
+                      className="rounded-lg border border-slate-300 bg-white p-1.5 text-[#101B35] focus:border-[#2675F5] focus:outline-none"
                     >
                       <option value="30">30 min</option>
                       <option value="60">60 min</option>
@@ -399,7 +403,7 @@ export default function AdminSettingsPage() {
                     <button
                       onClick={() => handleSaveHours(rule)}
                       disabled={isPending}
-                      className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition disabled:opacity-50"
+                      className="rounded-lg bg-[#2675F5] px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-600 transition disabled:opacity-50"
                     >
                       Save
                     </button>
@@ -415,15 +419,15 @@ export default function AdminSettingsPage() {
       {activeTab === 'policies' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Booking Duration Limits */}
-          <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl space-y-4">
-            <h2 className="text-lg font-bold text-white">Booking Constraints</h2>
-            <p className="text-xs text-slate-400">
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+            <h2 className="text-lg font-bold text-[#101B35]">Booking Constraints</h2>
+            <p className="text-xs text-slate-500">
               Control player booking durations and pending request expiration.
             </p>
 
             <div className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">
+                <label className="block text-slate-600 font-semibold mb-1">
                   Minimum Booking Duration (Minutes)
                 </label>
                 <input
@@ -437,12 +441,12 @@ export default function AdminSettingsPage() {
                       booking_policy: { ...settings.booking_policy, min_duration_minutes: val },
                     });
                   }}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-white font-mono"
+                  className={inputClass}
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">
+                <label className="block text-slate-600 font-semibold mb-1">
                   Maximum Booking Duration (Minutes)
                 </label>
                 <input
@@ -456,12 +460,12 @@ export default function AdminSettingsPage() {
                       booking_policy: { ...settings.booking_policy, max_duration_minutes: val },
                     });
                   }}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-white font-mono"
+                  className={inputClass}
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">
+                <label className="block text-slate-600 font-semibold mb-1">
                   Pending Request Hold Window (Minutes)
                 </label>
                 <input
@@ -475,14 +479,14 @@ export default function AdminSettingsPage() {
                       booking_policy: { ...settings.booking_policy, pending_expiry_minutes: val },
                     });
                   }}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-white font-mono"
+                  className={inputClass}
                 />
               </div>
 
               <button
                 onClick={() => handleSaveConfig('booking_policy', settings.booking_policy)}
                 disabled={isPending}
-                className="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 font-semibold text-white hover:bg-blue-500 transition disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#2675F5] py-2.5 font-semibold text-white hover:bg-blue-600 transition disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
                 Update Booking Policy
@@ -491,9 +495,9 @@ export default function AdminSettingsPage() {
           </div>
 
           {/* Complimentary Pool Table Policy */}
-          <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl space-y-4">
-            <h2 className="text-lg font-bold text-white">Pool Table Benefit Policy</h2>
-            <p className="text-xs text-slate-400">
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+            <h2 className="text-lg font-bold text-[#101B35]">Pool Table Benefit Policy</h2>
+            <p className="text-xs text-slate-500">
               Complimentary pool table access arrangement for players and guardians during their session.
             </p>
 
@@ -509,15 +513,15 @@ export default function AdminSettingsPage() {
                       pool_table_policy: { ...settings.pool_table_policy, complimentary: val },
                     });
                   }}
-                  className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-blue-600"
+                  className="h-4 w-4 rounded border-slate-300 text-[#2675F5]"
                 />
-                <span className="font-semibold text-white">
+                <span className="font-semibold text-[#101B35]">
                   Enable Complimentary Pool Table Access
                 </span>
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">
+                <label className="block text-slate-600 font-semibold mb-1">
                   Maximum Accompanying Guests
                 </label>
                 <input
@@ -532,12 +536,12 @@ export default function AdminSettingsPage() {
                       pool_table_policy: { ...settings.pool_table_policy, max_guests: val },
                     });
                   }}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-white font-mono"
+                  className={inputClass}
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">
+                <label className="block text-slate-600 font-semibold mb-1">
                   Policy Summary Text
                 </label>
                 <textarea
@@ -550,14 +554,14 @@ export default function AdminSettingsPage() {
                       pool_table_policy: { ...settings.pool_table_policy, rules: val },
                     });
                   }}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-white"
+                  className="w-full rounded-lg border border-slate-300 bg-white p-2 text-[#101B35] focus:border-[#2675F5] focus:outline-none focus:ring-2 focus:ring-[#2675F5]/20"
                 />
               </div>
 
               <button
                 onClick={() => handleSaveConfig('pool_table_policy', settings.pool_table_policy)}
                 disabled={isPending}
-                className="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 font-semibold text-white hover:bg-blue-500 transition disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#2675F5] py-2.5 font-semibold text-white hover:bg-blue-600 transition disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
                 Update Pool Policy
@@ -571,34 +575,34 @@ export default function AdminSettingsPage() {
       {activeTab === 'blocked' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Add Block Form */}
-          <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+            <h2 className="text-lg font-bold text-[#101B35] flex items-center gap-2">
               <Ban className="h-5 w-5 text-rose-500" />
               Block Date / Time
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500">
               Prevent bookings during tournaments, public holidays, or table maintenance.
             </p>
 
             <form onSubmit={handleAddBlockedPeriod} className="space-y-3 text-xs">
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">Title</label>
+                <label className="block font-semibold text-slate-600 mb-1">Title</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. National Championship Travel"
                   value={newBlockTitle}
                   onChange={(e) => setNewBlockTitle(e.target.value)}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-white placeholder-slate-600"
+                  className="w-full rounded-lg border border-slate-300 bg-white p-2 text-[#101B35] placeholder-slate-400 focus:border-[#2675F5] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">Category</label>
+                <label className="block font-semibold text-slate-600 mb-1">Category</label>
                 <select
                   value={newBlockType}
                   onChange={(e) => setNewBlockType(e.target.value)}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-white"
+                  className={selectClass}
                 >
                   <option value="holiday">Public / Poya Holiday</option>
                   <option value="tournament">Coach Tournament Day</option>
@@ -610,35 +614,35 @@ export default function AdminSettingsPage() {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">Start Date</label>
+                  <label className="block font-semibold text-slate-600 mb-1">Start Date</label>
                   <input
                     type="date"
                     required
                     value={newBlockStartDate}
                     onChange={(e) => setNewBlockStartDate(e.target.value)}
-                    className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-white"
+                    className="w-full rounded-lg border border-slate-300 bg-white p-2 text-[#101B35] focus:border-[#2675F5] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-slate-300 mb-1">End Date</label>
+                  <label className="block font-semibold text-slate-600 mb-1">End Date</label>
                   <input
                     type="date"
                     required
                     value={newBlockEndDate}
                     onChange={(e) => setNewBlockEndDate(e.target.value)}
-                    className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-white"
+                    className="w-full rounded-lg border border-slate-300 bg-white p-2 text-[#101B35] focus:border-[#2675F5] focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-300 mb-1">Reason / Notes</label>
+                <label className="block font-semibold text-slate-600 mb-1">Reason / Notes</label>
                 <input
                   type="text"
                   placeholder="e.g. Horizon College inter-school match"
                   value={newBlockReason}
                   onChange={(e) => setNewBlockReason(e.target.value)}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-white placeholder-slate-600"
+                  className="w-full rounded-lg border border-slate-300 bg-white p-2 text-[#101B35] placeholder-slate-400 focus:border-[#2675F5] focus:outline-none"
                 />
               </div>
 
@@ -654,35 +658,35 @@ export default function AdminSettingsPage() {
           </div>
 
           {/* Blocked Slots List */}
-          <div className="md:col-span-2 rounded-xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl space-y-4">
-            <h2 className="text-lg font-bold text-white">Active Blocked Periods ({blockedSlots.length})</h2>
+          <div className="md:col-span-2 rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+            <h2 className="text-lg font-bold text-[#101B35]">Active Blocked Periods ({blockedSlots.length})</h2>
             <div className="space-y-2">
               {blockedSlots.length === 0 ? (
-                <div className="text-xs text-slate-500 italic py-8 text-center">
+                <div className="text-xs text-slate-400 italic py-8 text-center">
                   No blocked dates or holidays configured.
                 </div>
               ) : (
                 blockedSlots.map((b) => (
                   <div
                     key={b.id}
-                    className="rounded-lg border border-slate-800 bg-slate-950/60 p-4 flex items-center justify-between text-xs"
+                    className="rounded-lg border border-slate-200 bg-[#F5F7FB] p-4 flex items-center justify-between text-xs"
                   >
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2 font-bold text-white">
+                      <div className="flex items-center gap-2 font-bold text-[#101B35]">
                         <span>{b.title}</span>
-                        <span className="rounded bg-rose-500/20 text-rose-400 px-2 py-0.5 text-[10px] uppercase font-bold border border-rose-500/30">
+                        <span className="rounded bg-rose-50 text-rose-600 px-2 py-0.5 text-[10px] uppercase font-bold border border-rose-200">
                           {b.block_type}
                         </span>
                       </div>
-                      <div className="text-slate-400 font-mono">
+                      <div className="text-slate-500 font-mono">
                         {b.start_date} {b.start_date !== b.end_date && `– ${b.end_date}`}
                       </div>
-                      {b.reason && <div className="text-slate-500 text-[11px]">{b.reason}</div>}
+                      {b.reason && <div className="text-slate-400 text-[11px]">{b.reason}</div>}
                     </div>
 
                     <button
                       onClick={() => handleDeleteBlockedSlot(b.id)}
-                      className="rounded-lg p-2 text-slate-500 hover:bg-rose-950/50 hover:text-rose-400 transition"
+                      className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
                       title="Delete block"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -697,15 +701,15 @@ export default function AdminSettingsPage() {
 
       {/* Tab 5: Contact & Location Info */}
       {activeTab === 'contact' && (
-        <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl space-y-4 max-w-xl">
-          <h2 className="text-lg font-bold text-white">Official Academy Details</h2>
-          <p className="text-xs text-slate-400">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-4 max-w-xl">
+          <h2 className="text-lg font-bold text-[#101B35]">Official Academy Details</h2>
+          <p className="text-xs text-slate-500">
             Contact information shown across website footers, booking confirmations, and contact forms.
           </p>
 
           <div className="space-y-4 text-xs">
             <div>
-              <label className="block text-slate-300 font-semibold mb-1">Contact Phone</label>
+              <label className="block text-slate-600 font-semibold mb-1">Contact Phone</label>
               <input
                 type="text"
                 value={settings.contact_info?.phone || ''}
@@ -715,12 +719,12 @@ export default function AdminSettingsPage() {
                     contact_info: { ...settings.contact_info, phone: e.target.value },
                   });
                 }}
-                className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-white font-mono"
+                className={inputClass}
               />
             </div>
 
             <div>
-              <label className="block text-slate-300 font-semibold mb-1">Official Email</label>
+              <label className="block text-slate-600 font-semibold mb-1">Official Email</label>
               <input
                 type="email"
                 value={settings.contact_info?.email || ''}
@@ -730,12 +734,12 @@ export default function AdminSettingsPage() {
                     contact_info: { ...settings.contact_info, email: e.target.value },
                   });
                 }}
-                className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-white font-mono"
+                className={inputClass}
               />
             </div>
 
             <div>
-              <label className="block text-slate-300 font-semibold mb-1">Physical Location</label>
+              <label className="block text-slate-600 font-semibold mb-1">Physical Location</label>
               <input
                 type="text"
                 value={settings.contact_info?.location || ''}
@@ -745,12 +749,12 @@ export default function AdminSettingsPage() {
                     contact_info: { ...settings.contact_info, location: e.target.value },
                   });
                 }}
-                className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-white"
+                className="w-full rounded-lg border border-slate-300 bg-white p-2 text-[#101B35] focus:border-[#2675F5] focus:outline-none focus:ring-2 focus:ring-[#2675F5]/20"
               />
             </div>
 
             <div>
-              <label className="block text-slate-300 font-semibold mb-1">Google Maps URL</label>
+              <label className="block text-slate-600 font-semibold mb-1">Google Maps URL</label>
               <input
                 type="text"
                 value={settings.contact_info?.mapsUrl || ''}
@@ -760,14 +764,14 @@ export default function AdminSettingsPage() {
                     contact_info: { ...settings.contact_info, mapsUrl: e.target.value },
                   });
                 }}
-                className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 text-white font-mono"
+                className={inputClass}
               />
             </div>
 
             <button
               onClick={() => handleSaveConfig('contact_info', settings.contact_info)}
               disabled={isPending}
-              className="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 font-semibold text-white hover:bg-blue-500 transition disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#2675F5] py-2.5 font-semibold text-white hover:bg-blue-600 transition disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               Update Contact Information
