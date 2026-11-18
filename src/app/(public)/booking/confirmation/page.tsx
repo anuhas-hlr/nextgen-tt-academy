@@ -98,11 +98,19 @@ function ConfirmationContent() {
 
         {/* Action Buttons */}
         <div className="mt-8 flex flex-col gap-3">
+          <Link
+            href={`/booking/status?ref=${refCode}`}
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#2675F5] px-6 py-3.5 text-sm font-bold text-white hover:bg-blue-600 transition shadow-md shadow-blue-500/20"
+          >
+            <Clock className="h-4 w-4" />
+            <span>Check Live Booking Status</span>
+          </Link>
+
           <a
             href={`https://wa.me/94756399105?text=${whatsappMessage}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white hover:bg-emerald-700 transition shadow-md shadow-emerald-600/20"
+            className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white hover:bg-emerald-700 transition"
           >
             <MessageCircle className="h-4 w-4" />
             <span>Notify Coach on WhatsApp</span>

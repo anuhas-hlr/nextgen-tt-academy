@@ -253,7 +253,7 @@ export async function submitBookingRequest(input: PublicBookingRequestInput) {
   const bookingReference = `NGTT-${dateCompact}-${randomSuffix}`;
 
   // 5. Insert booking with status: PENDING
-  const { data: insertedBooking, error: insertErr } = await db
+  const { error: insertErr } = await db
     .from('bookings')
     .insert({
       booking_reference: bookingReference,
@@ -277,9 +277,7 @@ export async function submitBookingRequest(input: PublicBookingRequestInput) {
       participants_count: data.participantsCount || 1,
       pool_table_complimentary: true,
       notes: data.notes?.trim() || null,
-    })
-    .select('id, booking_reference, total_amount')
-    .single();
+    });
 
   // Handle single-table exclusion constraint conflict (PostgreSQL code 23P01)
   if (insertErr) {
@@ -381,3 +379,119 @@ export async function getLiveServiceRates() {
 
   return services;
 }
+
+/**
+ * Public Booking Status Lookup by Reference Code OR Customer Email
+ */
+export async function getPublicBookingStatus(query: string) {
+  if (!query || query.trim().length === 0) {
+    return { error: 'Please enter a valid booking reference code or email address.' };
+  }
+
+  const cleanQuery = query.trim();
+  const isEmail = cleanQuery.includes('@');
+  const supabase = await createClient();
+  const db = supabase as any;
+
+  // If user searched by Email address
+  if (isEmail) {
+    const { data: bookings, error } = await db
+      .from('bookings')
+      .select('booking_reference, customer_name, customer_email, booking_date, start_time, end_time, booking_type, total_amount, status, payment_status, created_at')
+      .ilike('customer_email', cleanQuery)
+      .order('booking_date', { ascending: false })
+      .limit(5);
+
+    if (error) {
+      console.error('Email status lookup error:', error);
+      return { error: 'Could not fetch bookings for that email address.' };
+    }
+
+    if (!bookings || bookings.length === 0) {
+      return { error: `No bookings found matching email "${cleanQuery}".` };
+    }
+
+    return {
+      bookings: bookings.map((b: any) => ({
+        booking_reference: b.booking_reference,
+        customer_name: b.customer_name,
+        customer_email: b.customer_email,
+        booking_date: b.booking_date,
+        start_time: formatDisplayTime(b.start_time),
+        end_time: formatDisplayTime(b.end_time),
+        service_title: b.booking_type || 'Table Session',
+        total_amount: Number(b.total_amount),
+        status: b.status,
+        payment_status: b.payment_status || 'unpaid',
+        created_at: b.created_at,
+      })),
+    };
+  }
+
+  // Otherwise, user searched by Booking Reference code
+  const cleanRef = cleanQuery.toUpperCase();
+
+  // 1. First attempt: call RPC `get_booking_by_reference`
+  try {
+    const { data: rpcData, error: rpcErr } = await db.rpc('get_booking_by_reference', {
+      p_ref: cleanRef,
+    });
+
+    if (!rpcErr && rpcData && rpcData.length > 0) {
+      const b = rpcData[0];
+      return {
+        bookings: [
+          {
+            booking_reference: b.booking_reference,
+            customer_name: b.customer_name,
+            booking_date: b.booking_date,
+            start_time: formatDisplayTime(b.start_time),
+            end_time: formatDisplayTime(b.end_time),
+            service_title: b.booking_type || 'Table Session',
+            total_amount: Number(b.total_amount),
+            status: b.status,
+            payment_status: 'unpaid',
+            created_at: new Date().toISOString(),
+          },
+        ],
+      };
+    }
+  } catch (rpcCatch) {
+    console.warn('RPC check skipped, falling back to direct lookup:', rpcCatch);
+  }
+
+  // 2. Direct lookup: Query with exact reference
+  const { data: directBooking, error: directErr } = await db
+    .from('bookings')
+    .select('booking_reference, customer_name, customer_email, booking_date, start_time, end_time, booking_type, total_amount, status, payment_status, created_at')
+    .ilike('booking_reference', cleanRef)
+    .maybeSingle();
+
+  if (directErr) {
+    console.error('Direct booking lookup error:', directErr);
+    return { error: `Lookup error: ${directErr.message}` };
+  }
+
+  if (!directBooking) {
+    return { error: `No booking found with reference "${cleanRef}". Please double check your code or search with your email.` };
+  }
+
+  return {
+    bookings: [
+      {
+        booking_reference: directBooking.booking_reference,
+        customer_name: directBooking.customer_name,
+        customer_email: directBooking.customer_email,
+        booking_date: directBooking.booking_date,
+        start_time: formatDisplayTime(directBooking.start_time),
+        end_time: formatDisplayTime(directBooking.end_time),
+        service_title: directBooking.booking_type || 'Table Session',
+        total_amount: Number(directBooking.total_amount),
+        status: directBooking.status,
+        payment_status: directBooking.payment_status || 'unpaid',
+        created_at: directBooking.created_at,
+      },
+    ],
+  };
+}
+

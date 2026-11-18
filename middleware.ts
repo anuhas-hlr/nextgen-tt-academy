@@ -37,11 +37,11 @@ export async function middleware(request: NextRequest) {
       }
     );
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
 
     // Admin route protection
     if (request.nextUrl.pathname.startsWith('/admin/dashboard')) {
-      if (!session) {
+      if (!user) {
         const redirectUrl = new URL('/admin/login', request.url);
         redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname);
         return NextResponse.redirect(redirectUrl);
@@ -49,7 +49,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Prevent logged-in admins from accessing login page
-    if (request.nextUrl.pathname === '/admin/login' && session) {
+    if (request.nextUrl.pathname === '/admin/login' && user) {
       return NextResponse.redirect(new URL('/admin/dashboard', request.url));
     }
   } catch (err) {

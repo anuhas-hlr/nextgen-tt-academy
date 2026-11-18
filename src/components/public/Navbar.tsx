@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { label: 'Programs', href: '/programs' },
   { label: 'Gallery', href: '/gallery' },
   { label: 'Contact', href: '/contact' },
+  { label: 'Check Status', href: '/booking/status' },
 ];
 
 export function Navbar() {
