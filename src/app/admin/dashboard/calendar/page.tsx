@@ -176,11 +176,12 @@ export default function AdminCalendarPage() {
     }
   };
 
-  const getServiceColor = (serviceName: string) => {
-    if (serviceName.toLowerCase().includes('personal')) {
+  const getServiceColor = (serviceName?: string) => {
+    const s = (serviceName || '').toLowerCase();
+    if (s.includes('personal')) {
       return 'border-l-4 border-l-blue-500 bg-blue-50 text-blue-800';
     }
-    if (serviceName.toLowerCase().includes('group')) {
+    if (s.includes('group')) {
       return 'border-l-4 border-l-purple-500 bg-purple-50 text-purple-800';
     }
     return 'border-l-4 border-l-amber-500 bg-amber-50 text-amber-800';

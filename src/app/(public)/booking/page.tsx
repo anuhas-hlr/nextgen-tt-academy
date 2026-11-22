@@ -27,6 +27,7 @@ import {
   type TimeSlotAvailability,
   type DayAvailabilityResult,
 } from '@/actions/booking-actions';
+import { getCurrentUserProfile } from '@/actions/auth-actions';
 import { ACADEMY_CONFIG, BOOKING_TYPES, type BookingType } from '@/lib/constants';
 
 interface BookingFormState {
@@ -132,6 +133,24 @@ function BookingFlow() {
 
     // Fetch initial slots for default date
     fetchSlotsForDate(defaultDate, 60);
+
+    // Auto-fill logged-in user profile details
+    async function checkUser() {
+      try {
+        const data = await getCurrentUserProfile();
+        if (data?.user) {
+          setForm((prev) => ({
+            ...prev,
+            customerName: prev.customerName || data.profile?.fullName || '',
+            customerEmail: prev.customerEmail || data.user.email || '',
+            customerPhone: prev.customerPhone || data.profile?.phone || '',
+          }));
+        }
+      } catch (e) {
+        console.error('Error auto-filling user profile:', e);
+      }
+    }
+    checkUser();
   }, []);
 
   const fetchSlotsForDate = (date: string, duration: number) => {

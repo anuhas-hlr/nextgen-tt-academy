@@ -20,6 +20,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { getPublicBookingStatus } from '@/actions/booking-actions';
+import { getCurrentUserProfile } from '@/actions/auth-actions';
 import { formatCurrencyLKR } from '@/lib/utils';
 import { ACADEMY_CONFIG } from '@/lib/constants';
 
@@ -45,6 +46,7 @@ function StatusContent() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [loggedInUser, setLoggedInUser] = useState<any>(null);
 
   const handleLookup = (queryToLookup: string) => {
     if (!queryToLookup.trim()) return;
@@ -61,6 +63,25 @@ function StatusContent() {
       }
     });
   };
+
+  // If user is logged in, auto-fetch their bookings by their email
+  useEffect(() => {
+    async function loadUserBookings() {
+      try {
+        const userState = await getCurrentUserProfile();
+        if (userState?.user?.email) {
+          setLoggedInUser(userState);
+          if (!initialRef) {
+            setSearchInput(userState.user.email);
+            handleLookup(userState.user.email);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load user bookings:', e);
+      }
+    }
+    loadUserBookings();
+  }, []);
 
   useEffect(() => {
     if (initialRef) {

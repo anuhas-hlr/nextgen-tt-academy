@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, ArrowRight, Phone } from 'lucide-react';
+import { Menu, X, ArrowRight, Phone, LogIn, User, Shield, LogOut } from 'lucide-react';
 import { ACADEMY_CONFIG } from '@/lib/constants';
+import { getCurrentUserProfile, userLogout } from '@/actions/auth-actions';
 
 const NAV_LINKS = [
   { label: 'Home', href: '/' },
@@ -19,6 +20,7 @@ const NAV_LINKS = [
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -33,13 +35,34 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Fetch logged in user profile on load
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const data = await getCurrentUserProfile();
+        if (data?.user) {
+          setCurrentUser(data);
+        } else {
+          setCurrentUser(null);
+        }
+      } catch (e) {
+        console.error('Navbar user fetch error:', e);
+      }
+    }
+    loadUser();
+  }, [pathname]);
+
+  const handleLogout = async () => {
+    await userLogout();
+    setCurrentUser(null);
+  };
+
   return (
     <header
-      className={`sticky top-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? 'bg-[#101B35]/95 shadow-lg backdrop-blur-md border-b border-white/10 py-3'
-          : 'bg-[#101B35] py-4 border-b border-white/5'
-      }`}
+      className={`sticky top-0 z-50 transition-all duration-300 ${scrolled
+        ? 'bg-[#101B35]/95 shadow-lg backdrop-blur-md border-b border-white/10 py-3'
+        : 'bg-[#101B35] py-4 border-b border-white/5'
+        }`}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo */}
@@ -58,16 +81,15 @@ export function Navbar() {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav className="hidden items-center gap-7 lg:flex">
           {NAV_LINKS.map((link) => {
             const isActive = pathname === link.href;
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`relative text-sm font-medium transition-colors hover:text-white ${
-                  isActive ? 'text-[#2675F5] font-semibold' : 'text-slate-300'
-                }`}
+                className={`relative text-sm font-medium transition-colors hover:text-white ${isActive ? 'text-[#2675F5] font-semibold' : 'text-slate-300'
+                  }`}
               >
                 {link.label}
                 {isActive && (
@@ -78,23 +100,55 @@ export function Navbar() {
           })}
         </nav>
 
-        {/* Desktop CTA */}
-        <div className="hidden items-center gap-4 md:flex">
-          <a
-            href={ACADEMY_CONFIG.whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs font-medium text-slate-300 hover:text-white transition"
-          >
-            <Phone className="h-3.5 w-3.5 text-[#2675F5]" />
-            <span>{ACADEMY_CONFIG.phone}</span>
-          </a>
+        {/* Desktop CTA & Auth Button */}
+        <div className="hidden items-center gap-3.5 md:flex">
+          {/* User / Admin Login State */}
+          {currentUser?.user ? (
+            <div className="flex items-center gap-2.5">
+              {currentUser.profile?.role === 'admin' ? (
+                <Link
+                  href="/admin/dashboard"
+                  className="flex items-center gap-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 px-3.5 py-2 text-xs font-semibold text-blue-300 hover:bg-blue-500/20 transition"
+                >
+                  <Shield className="h-3.5 w-3.5 text-blue-400" />
+                  <span>Admin Dashboard</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/booking/status"
+                  className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-white/10 transition"
+                  title="My Bookings"
+                >
+                  <User className="h-3.5 w-3.5 text-blue-400" />
+                  <span className="max-w-[120px] truncate">
+                    {currentUser.profile?.fullName || currentUser.user.email}
+                  </span>
+                </Link>
+              )}
+              <button
+                onClick={handleLogout}
+                className="rounded-xl border border-white/10 bg-white/5 p-2 text-slate-400 hover:text-white hover:bg-white/10 transition"
+                title="Sign Out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:border-white/20 hover:bg-white/10 transition"
+            >
+              <LogIn className="h-3.5 w-3.5 text-[#2675F5]" />
+              <span>Login</span>
+            </Link>
+          )}
+
           <Link
             href="/booking"
-            className="group flex items-center gap-2 rounded-xl bg-[#2675F5] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-500/40 active:scale-95"
+            className="group flex items-center gap-2 rounded-xl bg-[#2675F5] px-4 py-2 text-xs font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-600 hover:shadow-lg hover:shadow-blue-500/40 active:scale-95"
           >
             <span>Book a Session</span>
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
 
@@ -119,26 +173,53 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setIsOpen(false)}
-                  className={`rounded-xl px-4 py-3 text-base font-medium transition ${
-                    isActive
-                      ? 'bg-[#2675F5]/15 text-[#2675F5] font-semibold'
-                      : 'text-slate-200 hover:bg-white/5 hover:text-white'
-                  }`}
+                  className={`rounded-xl px-4 py-3 text-base font-medium transition ${isActive
+                    ? 'bg-[#2675F5]/15 text-[#2675F5] font-semibold'
+                    : 'text-slate-200 hover:bg-white/5 hover:text-white'
+                    }`}
                 >
                   {link.label}
                 </Link>
               );
             })}
+
             <div className="mt-4 pt-4 border-t border-white/10 flex flex-col gap-3">
-              <a
-                href={ACADEMY_CONFIG.whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 rounded-xl border border-white/10 py-3 text-sm font-medium text-slate-300"
-              >
-                <Phone className="h-4 w-4 text-[#2675F5]" />
-                <span>Call / WhatsApp: {ACADEMY_CONFIG.phone}</span>
-              </a>
+              {currentUser?.user ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between rounded-xl bg-white/5 px-4 py-3">
+                    <div className="flex items-center gap-2 text-sm text-white">
+                      <User className="h-4 w-4 text-[#2675F5]" />
+                      <span>{currentUser.profile?.fullName || currentUser.user.email}</span>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="text-xs text-rose-400 hover:underline flex items-center gap-1"
+                    >
+                      <LogOut className="h-3.5 w-3.5" /> Logout
+                    </button>
+                  </div>
+                  {currentUser.profile?.role === 'admin' && (
+                    <Link
+                      href="/admin/dashboard"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-blue-600/30 border border-blue-500/40 py-2.5 text-center text-xs font-semibold text-blue-300"
+                    >
+                      <Shield className="h-3.5 w-3.5" />
+                      <span>Go to Admin Dashboard</span>
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-3 text-sm font-medium text-slate-200"
+                >
+                  <LogIn className="h-4 w-4 text-[#2675F5]" />
+                  <span>Login / Sign Up</span>
+                </Link>
+              )}
+
               <Link
                 href="/booking"
                 onClick={() => setIsOpen(false)}

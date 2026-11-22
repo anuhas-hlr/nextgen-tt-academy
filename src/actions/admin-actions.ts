@@ -528,7 +528,7 @@ export async function getCalendarData(startDate: string, endDate: string) {
   const { supabase } = await requireAdmin();
   const db = supabase as any;
 
-  // Fetch bookings in date range
+  // Fetch bookings in date range with normalized customer fields
   const { data: bookings } = await db
     .from('bookings')
     .select('*')
@@ -544,8 +544,26 @@ export async function getCalendarData(startDate: string, endDate: string) {
     .lte('start_date', endDate)
     .gte('end_date', startDate);
 
+  const normalizedBookings = (bookings || []).map((b: any) => ({
+    id: b.id,
+    booking_reference: b.booking_reference,
+    player_name: b.player_name || b.customer_name || 'Anonymous Player',
+    player_phone: b.player_phone || b.customer_phone || '',
+    player_email: b.player_email || b.customer_email || '',
+    service_type_name: b.service_type_name || b.booking_type || 'Table Session',
+    booking_date: b.booking_date,
+    start_time: b.start_time,
+    end_time: b.end_time,
+    duration_minutes: b.duration_minutes || 60,
+    status: b.status || 'pending',
+    payment_status: b.payment_status || 'unpaid',
+    total_amount: Number(b.total_amount || 0),
+    participants_count: b.participants_count || 1,
+    notes: b.notes || '',
+  }));
+
   return {
-    bookings: bookings || [],
+    bookings: normalizedBookings,
     blockedSlots: blocks || [],
   };
 }
