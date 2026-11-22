@@ -382,6 +382,7 @@ export async function getLiveServiceRates() {
 
 /**
  * Public Booking Status Lookup by Reference Code OR Customer Email
+ * Uses PostgreSQL Security Definer RPC functions to bypass SELECT RLS
  */
 export async function getPublicBookingStatus(query: string) {
   if (!query || query.trim().length === 0) {
@@ -393,14 +394,41 @@ export async function getPublicBookingStatus(query: string) {
   const supabase = await createClient();
   const db = supabase as any;
 
-  // If user searched by Email address
+  // 1. Search by Email address using Security Definer RPC
   if (isEmail) {
+    try {
+      const { data: rpcData, error: rpcErr } = await db.rpc('get_bookings_by_email', {
+        p_email: cleanQuery.toLowerCase(),
+      });
+
+      if (!rpcErr && rpcData && rpcData.length > 0) {
+        return {
+          bookings: rpcData.map((b: any) => ({
+            booking_reference: b.booking_reference,
+            customer_name: b.customer_name,
+            customer_email: b.customer_email,
+            booking_date: b.booking_date,
+            start_time: formatDisplayTime(b.start_time),
+            end_time: formatDisplayTime(b.end_time),
+            service_title: b.booking_type || 'Table Session',
+            total_amount: Number(b.total_amount),
+            status: b.status,
+            payment_status: 'unpaid',
+            created_at: new Date().toISOString(),
+          })),
+        };
+      }
+    } catch (e) {
+      console.warn('RPC get_bookings_by_email failed, attempting direct query:', e);
+    }
+
+    // Fallback: direct query
     const { data: bookings, error } = await db
       .from('bookings')
       .select('booking_reference, customer_name, customer_email, booking_date, start_time, end_time, booking_type, total_amount, status, payment_status, created_at')
       .ilike('customer_email', cleanQuery)
       .order('booking_date', { ascending: false })
-      .limit(5);
+      .limit(10);
 
     if (error) {
       console.error('Email status lookup error:', error);
@@ -428,10 +456,9 @@ export async function getPublicBookingStatus(query: string) {
     };
   }
 
-  // Otherwise, user searched by Booking Reference code
+  // 2. Search by Booking Reference code using Security Definer RPC
   const cleanRef = cleanQuery.toUpperCase();
 
-  // 1. First attempt: call RPC `get_booking_by_reference`
   try {
     const { data: rpcData, error: rpcErr } = await db.rpc('get_booking_by_reference', {
       p_ref: cleanRef,
@@ -444,6 +471,7 @@ export async function getPublicBookingStatus(query: string) {
           {
             booking_reference: b.booking_reference,
             customer_name: b.customer_name,
+            customer_email: b.customer_email,
             booking_date: b.booking_date,
             start_time: formatDisplayTime(b.start_time),
             end_time: formatDisplayTime(b.end_time),
@@ -457,10 +485,10 @@ export async function getPublicBookingStatus(query: string) {
       };
     }
   } catch (rpcCatch) {
-    console.warn('RPC check skipped, falling back to direct lookup:', rpcCatch);
+    console.warn('RPC get_booking_by_reference failed, attempting direct query:', rpcCatch);
   }
 
-  // 2. Direct lookup: Query with exact reference
+  // Fallback: direct query
   const { data: directBooking, error: directErr } = await db
     .from('bookings')
     .select('booking_reference, customer_name, customer_email, booking_date, start_time, end_time, booking_type, total_amount, status, payment_status, created_at')
